@@ -66,7 +66,7 @@ following to `/etc/ssh/sshd_config`:
 
 ```shell
 AuthorizedKeysCommand /path/to/compiled/binary
-AuthorizedKeysCommandRunAs nobody
+AuthorizedKeysCommandUser nobody
 ```
 
 Then restart sshd:
