@@ -60,16 +60,17 @@ func main() {
 			}
 			if resp, err := svc.ListSSHPublicKeys(params); err == nil {
 				for _, k := range resp.SSHPublicKeys {
+					if *k.Status != "Active" {
+						continue
+					}
 					params := &iam.GetSSHPublicKeyInput{
 						Encoding:       aws.String("SSH"),
 						SSHPublicKeyId: k.SSHPublicKeyId,
 						UserName:       userName,
 					}
 					resp, _ := svc.GetSSHPublicKey(params)
-					if *resp.SSHPublicKey.Status == "Active" {
-						fmt.Printf("# %s\n", *userName)
-						fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
-					}
+					fmt.Printf("# %s\n", *userName)
+					fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
 				}
 			}
 			wg.Done()
