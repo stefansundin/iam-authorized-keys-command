@@ -34,6 +34,30 @@ To build a binary for 64-bit linux:
 GOOS=linux GOARCH=amd64 go build
 ```
 
+IAM Role Permissions
+====================
+
+This script needs the following policy to execute properly, so make sure you
+apply it to your EC2 Role:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetGroup",
+                "iam:ListUsers",
+                "iam:GetSSHPublicKey",
+                "iam:ListSSHPublicKeys"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
 Configuring sshd
 ================
 
