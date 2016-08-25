@@ -49,6 +49,7 @@ func main() {
 
 	users, err := users(svc, iamGroup)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(exitCodeError)
 	}
 
