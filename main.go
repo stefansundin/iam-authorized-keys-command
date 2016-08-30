@@ -54,8 +54,8 @@ func main() {
 	}
 
 	for _, u := range users {
+		wg.Add(1)
 		go func(userName *string) {
-			wg.Add(1)
 			params := &iam.ListSSHPublicKeysInput{
 				UserName: userName,
 			}
