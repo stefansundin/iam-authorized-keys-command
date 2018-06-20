@@ -3,31 +3,16 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
 
-const (
-	exitCodeOk    int = 0
-	exitCodeError int = 1
-)
-
 func main() {
-	// Exit cleanly on SIGPIPE
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGPIPE)
-	go func() {
-		_ = <-c
-		os.Exit(exitCodeOk)
-	}()
-
 	// Check for user name
 	if len(os.Args) <= 1 {
-		os.Exit(exitCodeOk)
+		os.Exit(0)
 	}
 	sshUserName := os.Args[1]
 
@@ -52,5 +37,5 @@ func main() {
 			fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
 		}
 	}
-	os.Exit(exitCodeOk)
+	os.Exit(0)
 }
