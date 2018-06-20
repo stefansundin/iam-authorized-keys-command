@@ -17,7 +17,11 @@ func main() {
 	sshUserName := os.Args[1]
 
 	// Get the user's SSH keys
-	sess, _ := session.NewSession()
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			CredentialsChainVerboseErrors: aws.Bool(true),
+		},
+	}))
 	svc := iam.New(sess)
 	if resp, err := svc.ListSSHPublicKeys(&iam.ListSSHPublicKeysInput{
 		UserName: &sshUserName,
@@ -34,6 +38,8 @@ func main() {
 			fmt.Printf("# %s\n", sshUserName)
 			fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
 		}
+	} else {
+		fmt.Fprintln(os.Stderr, err)
 	}
 	os.Exit(0)
 }
