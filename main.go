@@ -17,22 +17,20 @@ func main() {
 	sshUserName := os.Args[1]
 
 	// Get the user's SSH keys
-	params := &iam.ListSSHPublicKeysInput{
-		UserName: &sshUserName,
-	}
 	sess, _ := session.NewSession()
 	svc := iam.New(sess)
-	if resp, err := svc.ListSSHPublicKeys(params); err == nil {
+	if resp, err := svc.ListSSHPublicKeys(&iam.ListSSHPublicKeysInput{
+		UserName: &sshUserName,
+	}); err == nil {
 		for _, key := range resp.SSHPublicKeys {
 			if *key.Status != "Active" {
 				continue
 			}
-			params := &iam.GetSSHPublicKeyInput{
+			resp, _ := svc.GetSSHPublicKey(&iam.GetSSHPublicKeyInput{
 				Encoding:       aws.String("SSH"),
 				SSHPublicKeyId: key.SSHPublicKeyId,
 				UserName:       &sshUserName,
-			}
-			resp, _ := svc.GetSSHPublicKey(params)
+			})
 			fmt.Printf("# %s\n", sshUserName)
 			fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
 		}
