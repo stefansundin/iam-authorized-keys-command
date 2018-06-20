@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,29 +16,8 @@ const (
 	exitCodeError int = 1
 )
 
-var (
-	wg sync.WaitGroup
-
-	iamGroup    = ""
-	sshUserName = ""
-)
-
 func main() {
-	sess, _ := session.NewSession()
-	svc := iam.New(sess)
-
-	// check for valid user name
-	if sshUserName != "" && (len(os.Args) < 2 || os.Args[1] != sshUserName) {
-		os.Exit(exitCodeOk)
-	}
-
-	// Handle SIGPIPE
-	//
-	// When sshd identifies a key in the stdout of this command, it closes
-	// the pipe causing a series of EPIPE errors before a SIGPIPE is emitted
-	// on this scripts pid. If the script exits with the standard 13 code, sshd
-	// will disregard any matched keys. We catch the signal here and exit 0 to
-	// fix that problem.
+	// Exit cleanly on SIGPIPE
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGPIPE)
 	go func() {
@@ -47,51 +25,32 @@ func main() {
 		os.Exit(exitCodeOk)
 	}()
 
-	users, err := users(svc, iamGroup)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(exitCodeError)
+	// Check for user name
+	if len(os.Args) <= 1 {
+		os.Exit(exitCodeOk)
 	}
+	sshUserName := os.Args[1]
 
-	for _, u := range users {
-		wg.Add(1)
-		go func(userName *string) {
-			params := &iam.ListSSHPublicKeysInput{
-				UserName: userName,
-			}
-			if resp, err := svc.ListSSHPublicKeys(params); err == nil {
-				for _, k := range resp.SSHPublicKeys {
-					if *k.Status != "Active" {
-						continue
-					}
-					params := &iam.GetSSHPublicKeyInput{
-						Encoding:       aws.String("SSH"),
-						SSHPublicKeyId: k.SSHPublicKeyId,
-						UserName:       userName,
-					}
-					resp, _ := svc.GetSSHPublicKey(params)
-					fmt.Printf("# %s\n", *userName)
-					fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
-				}
-			}
-			wg.Done()
-		}(u.UserName)
+	// Get the user's SSH keys
+	params := &iam.ListSSHPublicKeysInput{
+		UserName: &sshUserName,
 	}
-	wg.Wait()
-}
-
-// get all IAM users, or just those that are part of the defined group
-func users(svc *iam.IAM, iamGroup string) ([]*iam.User, error) {
-	if iamGroup != "" {
-		params := &iam.GetGroupInput{
-			GroupName: aws.String(iamGroup),
+	sess, _ := session.NewSession()
+	svc := iam.New(sess)
+	if resp, err := svc.ListSSHPublicKeys(params); err == nil {
+		for _, key := range resp.SSHPublicKeys {
+			if *key.Status != "Active" {
+				continue
+			}
+			params := &iam.GetSSHPublicKeyInput{
+				Encoding:       aws.String("SSH"),
+				SSHPublicKeyId: key.SSHPublicKeyId,
+				UserName:       &sshUserName,
+			}
+			resp, _ := svc.GetSSHPublicKey(params)
+			fmt.Printf("# %s\n", sshUserName)
+			fmt.Println(*resp.SSHPublicKey.SSHPublicKeyBody)
 		}
-		resp, err := svc.GetGroup(params)
-		return resp.Users, err
 	}
-	params := &iam.ListUsersInput{
-		MaxItems: aws.Int64(100),
-	}
-	resp, err := svc.ListUsers(params)
-	return resp.Users, err
+	os.Exit(exitCodeOk)
 }
